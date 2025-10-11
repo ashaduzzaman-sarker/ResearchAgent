@@ -13,3 +13,4 @@ pinecone-client
 google-search-results  # For SerpAPI
 langgraph
 streamlit
+pyyaml

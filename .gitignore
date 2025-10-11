@@ -1,5 +1,6 @@
 # Data files (large, don't commit)
 files/
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
