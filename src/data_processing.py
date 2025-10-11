@@ -2,7 +2,7 @@ import os
 import logging
 import pandas as pd
 from tqdm import tqdm
-from langchain.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import yaml
 
