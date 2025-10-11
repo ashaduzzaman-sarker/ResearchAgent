@@ -12,3 +12,12 @@ data_processing:
     chunk_overlap: 100
   output:
     expanded_json_path: "files/expanded_dataset.json"
+embeddings:
+  model: "text-embedding-ada-002"
+  batch_size: 32
+  pinecone:
+    index_name: "research-agent-index"
+    namespace: "arxiv_chunks"
+    dimension: 1536  # Dimension for text-embedding-ada-002
+  output:
+    embedding_metadata_path: "files/embedding_metadata.json"

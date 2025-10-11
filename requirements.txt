@@ -9,7 +9,7 @@ langchain
 langchain-openai
 langchain-community  # For PyPDFLoader, etc.
 langchain-pinecone
-pinecone-client
+pinecone
 google-search-results  # For SerpAPI
 langgraph
 streamlit
