@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 import yaml
@@ -6,8 +7,16 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, List, Annotated
-from tools import rag_search, web_search
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Try relative import first (when used as module), fall back to absolute
+try:
+    from .tools import rag_search, web_search
+except ImportError:
+    from tools import rag_search, web_search
+    
 # ================================
 # Logging Configuration
 # ================================
