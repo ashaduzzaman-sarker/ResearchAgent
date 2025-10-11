@@ -1,15 +1,15 @@
 openai
-langchain
-langchain-community
-langchain-openai
-langgraph
-python-dotenv
-pypdf
-requests
-pandas
-semantic_router
-pinecone
-serpapi
-google-search-results
 arxiv
+pandas
+requests
+tqdm
+python-dotenv
 ipykernel
+langchain
+langchain-openai
+langchain-community  # For PyPDFLoader, etc.
+langchain-pinecone
+pinecone-client
+google-search-results  # For SerpAPI
+langgraph
+streamlit
