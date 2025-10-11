@@ -21,3 +21,16 @@ embeddings:
     dimension: 1536  # Dimension for text-embedding-ada-002
   output:
     embedding_metadata_path: "files/embedding_metadata.json"
+agent:
+  llm_model: "gpt-4o"
+  max_iterations: 5
+  tools:
+    rag:
+      top_k: 5
+    serpapi:
+      max_results: 3
+  output:
+    responses_path: "files/agent_responses.json"
+streamlit:
+  port: 8501
+  title: "Research Agent Interface"
