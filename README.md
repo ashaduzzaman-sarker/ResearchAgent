@@ -16,6 +16,7 @@ ResearchAgent/
 ├── requirements.txt
 ├── .gitignore
 ├── .env.example
+├── config.yaml
 ├── src/
 │   ├── __init__.py
 │   ├── data_extraction.py  # For ArXiv extraction and PDF handling
