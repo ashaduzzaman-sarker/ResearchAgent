@@ -59,28 +59,11 @@ def load_env():
 # =============================
 
 def extract_arxiv_data(search_query='cat:cs.AI', max_results=10, json_file_path='files/arxiv_dataset.json'):
-    """
-    Extract research papers from ArXiv and save metadata to a JSON file.
-
-    Args:
-        search_query (str): The search query for ArXiv (e.g., "cat:cs.AI").
-        max_results (int): Maximum number of results to fetch.
-        json_file_path (str): Path to save the JSON file.
-
-    Returns:
-        pd.DataFrame: DataFrame containing the extracted metadata.
-    """
+    """Extract research papers from ArXiv and save metadata to a JSON file."""
     try:
-        # Validate inputs
-        if not isinstance(max_results, int) or max_results <= 0:
-            raise ValueError("max_results must be a positive integer.")
-        if not json_file_path.endswith('.json'):
-            raise ValueError("json_file_path must end with '.json'.")
-
         os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
         logger.info(f"Output directory ensured at {os.path.dirname(json_file_path)}.")
 
-        # Initialize ArXiv client
         client = arxiv.Client()
         search = arxiv.Search(
             query=search_query,
@@ -88,43 +71,37 @@ def extract_arxiv_data(search_query='cat:cs.AI', max_results=10, json_file_path=
             sort_by=arxiv.SortCriterion.SubmittedDate
         )
 
-        # Fetch results
         results = list(client.results(search))
         logger.info(f"Fetched {len(results)} papers from ArXiv for query: {search_query}.")
 
         papers = []
         for result in results:
             try:
-                papers.append({
-                    'title': result.title,
-                    'summary': result.summary,
-                    'authors': [author.name for author in result.authors],
-                    'arxiv_id': result.entry_id.split('/')[-1],
-                    'pdf_link': result.pdf_url,
-                    'published': result.published.strftime('%Y-%m-%d'),
-                    'updated': result.updated.strftime('%Y-%m-%d')
-                })
+                arxiv_id = result.entry_id.split('/')[-1]
+                pdf_link = result.pdf_url
+                paper = {
+                    "title": result.title.strip(),
+                    "summary": result.summary.strip(),
+                    "authors": [a.name for a in result.authors],
+                    "arxiv_id": arxiv_id,
+                    "pdf_link": pdf_link,
+                    "url": f"https://arxiv.org/abs/{arxiv_id}",
+                    "published": result.published.strftime("%Y-%m-%d"),
+                    "updated": result.updated.strftime("%Y-%m-%d")
+                }
+                papers.append(paper)
             except Exception as e:
-                logger.warning(f"Error processing paper {getattr(result, 'entry_id', 'Unknown')}: {e}")
+                logger.warning(f"Error processing paper: {e}")
                 continue
 
         if not papers:
-            logger.warning("No papers were successfully retrieved from ArXiv.")
+            logger.warning("No papers retrieved.")
             return pd.DataFrame()
 
-        # Convert to DataFrame
         df = pd.DataFrame(papers)
-        logger.info(f"DataFrame created successfully with {len(df)} records.")
-
-        # Save to JSON
-        try:
-            with open(json_file_path, 'w', encoding='utf-8') as f:
-                json.dump(papers, f, ensure_ascii=False, indent=4)
-            logger.info(f"Metadata saved successfully to {json_file_path}.")
-        except Exception as e:
-            logger.error(f"Failed to save metadata to JSON: {e}")
-            raise
-
+        with open(json_file_path, 'w', encoding='utf-8') as f:
+            json.dump(papers, f, ensure_ascii=False, indent=4)
+        logger.info(f"Metadata saved to {json_file_path}.")
         return df
 
     except Exception as e:
@@ -137,59 +114,43 @@ def extract_arxiv_data(search_query='cat:cs.AI', max_results=10, json_file_path=
 # =============================
 
 def download_pdfs(df, download_folder='files/pdfs'):
-    """
-    Download PDFs from ArXiv URL links in the DataFrame.
-
-    Args:
-        df (pd.DataFrame): DataFrame containing 'pdf_link' and 'arxiv_id' columns.
-        download_folder (str): Folder to save the downloaded PDFs.
-
-    Returns:
-        pd.DataFrame: Updated DataFrame with 'pdf_file_name' column.
-    """
+    """Download PDFs from ArXiv URLs and add 'pdf_file_name' column."""
     try:
         if df.empty:
             logger.warning("DataFrame is empty. No PDFs to download.")
             return df
 
-        if 'pdf_link' not in df.columns or 'arxiv_id' not in df.columns:
-            raise ValueError("DataFrame must contain 'pdf_link' and 'arxiv_id' columns.")
-
         os.makedirs(download_folder, exist_ok=True)
         logger.info(f"Download folder ensured at {download_folder}.")
 
-        pdf_file_names = []
-        for index, row in tqdm(df.iterrows(), total=len(df), desc="Downloading PDFs"):
-            pdf_link = row.get('pdf_link')
-            arxiv_id = row.get('arxiv_id')
+        pdf_files = []
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Downloading PDFs"):
+            pdf_link = row.get("pdf_link")
+            arxiv_id = row.get("arxiv_id")
 
-            if not pdf_link or not isinstance(pdf_link, str):
-                logger.warning(f"Skipping row {index}: Invalid or missing PDF link.")
-                pdf_file_names.append(None)
+            if not pdf_link:
+                pdf_files.append(None)
                 continue
 
             file_path = os.path.join(download_folder, f"{arxiv_id}.pdf")
-
-            # Skip if already downloaded
             if os.path.exists(file_path):
                 logger.info(f"PDF already exists for {arxiv_id}, skipping download.")
-                pdf_file_names.append(file_path)
+                pdf_files.append(file_path)
                 continue
 
             try:
                 response = requests.get(pdf_link, stream=True, timeout=30)
                 response.raise_for_status()
-                with open(file_path, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                logger.info(f"Downloaded PDF for {arxiv_id} to {file_path}.")
-                pdf_file_names.append(file_path)
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to download PDF for {arxiv_id} from {pdf_link}: {e}")
-                pdf_file_names.append(None)
+                with open(file_path, "wb") as f:
+                    for chunk in response.iter_content(8192):
+                        f.write(chunk)
+                logger.info(f"Downloaded {arxiv_id}")
+                pdf_files.append(file_path)
+            except Exception as e:
+                logger.error(f"Failed to download {arxiv_id}: {e}")
+                pdf_files.append(None)
 
-        df['pdf_file_name'] = pdf_file_names
+        df["pdf_file_name"] = pdf_files
         logger.info("PDF download process completed.")
         return df
 
@@ -203,37 +164,32 @@ def download_pdfs(df, download_folder='files/pdfs'):
 # =============================
 
 def main():
-    """Main function to execute ArXiv data extraction and PDF downloading."""
     try:
         load_env()
         config = load_config()
 
-        arxiv_config = config.get('data_extraction', {}).get('arxiv', {})
-        output_config = config.get('data_extraction', {}).get('output', {})
+        arxiv_conf = config.get("data_extraction", {}).get("arxiv", {})
+        output_conf = config.get("data_extraction", {}).get("output", {})
 
-        # Extract data
         df = extract_arxiv_data(
-            search_query=arxiv_config.get('search_query', 'cat:cs.AI'),
-            max_results=arxiv_config.get('max_results', 10),
-            json_file_path=output_config.get('json_file_path', 'files/arxiv_dataset.json')
+            search_query=arxiv_conf.get("search_query", "cat:cs.AI"),
+            max_results=arxiv_conf.get("max_results", 10),
+            json_file_path=output_conf.get("json_file_path", "files/arxiv_dataset.json")
         )
 
-        # Download PDFs
-        df = download_pdfs(
-            df,
-            download_folder=output_config.get('pdf_folder', 'files/pdfs')
-        )
-
+        df = download_pdfs(df, output_conf.get("pdf_folder", "files/pdfs"))
+        
+        # CRITICAL FIX: Save the updated DataFrame with pdf_file_name column back to JSON
+        json_file_path = output_conf.get("json_file_path", "files/arxiv_dataset.json")
+        df.to_json(json_file_path, orient="records", indent=4)
+        logger.info(f"Updated metadata with PDF file paths saved to {json_file_path}.")
+        
         logger.info("Data extraction and PDF downloading completed successfully.")
 
     except Exception as e:
-        logger.error(f"Error in main execution: {e}")
+        logger.error(f"Fatal error in main(): {e}")
         raise
 
-
-# =============================
-# Entry Point
-# =============================
 
 if __name__ == "__main__":
     main()

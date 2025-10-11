@@ -1,30 +1,14 @@
-# ======================================================
-# Configuration File for ResearchAgent Data Extraction
-# ======================================================
-
+# ResearchAgent Configuration
 data_extraction:
   arxiv:
-    # ArXiv search query (example: "cat:cs.AI" for Artificial Intelligence papers)
     search_query: "cat:cs.AI"
-
-    # Maximum number of papers to fetch (ArXiv API limit: ~300 per request)
     max_results: 10
-
   output:
-    # File path to save metadata (JSON)
     json_file_path: "files/arxiv_dataset.json"
-
-    # Folder to save downloaded PDF files
     pdf_folder: "files/pdfs"
-
-# ======================================================
-# Logging and Environment Settings (optional future use)
-# ======================================================
-logging:
-  level: "INFO"
-  file_path: "logs/research_agent.log"
-
-env:
-  # Example environment variable usage (if needed)
-  # You can store API keys in a .env file instead of here
-  use_dotenv: true
+data_processing:
+  chunking:
+    chunk_size: 800
+    chunk_overlap: 100
+  output:
+    expanded_json_path: "files/expanded_dataset.json"
