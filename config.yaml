@@ -2,7 +2,7 @@
 data_extraction:
   arxiv:
     search_query: "cat:cs.AI"
-    max_results: 10
+    max_results: 100
   output:
     json_file_path: "files/arxiv_dataset.json"
     pdf_folder: "files/pdfs"
