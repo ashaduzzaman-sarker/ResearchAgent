@@ -19,7 +19,6 @@
 - [How It Works](#how-it-works)
 - [Technologies Used](#technologies-used)
 - [Contributing](#contributing)
-- [License](#license)
 
 ## 🎯 Overview
 
@@ -202,7 +201,7 @@ ResearchAgent/
 │   └── agent_graph.py             # LangGraph workflow
 ├── streamlit_app.py                         # Streamlit interface
 ├── config.yaml                    # Configuration file
-├── .env                           # Environment variables (create this)
+├── .env.example                   # Environment variables (create .env)
 ├── requirements.txt               # Python dependencies
 ├── files/                         # Create 'files' for Generated data files
 │   ├── arxiv_dataset.json
@@ -248,16 +247,13 @@ START → Classify Query → [RAG Search] → [Web Search] → Generate Answer �
                      └────────────────────────────────────────┘
 ```
 
-## 🛠️ Technologies Used
+## 📊 Performance
 
-- **[LangChain](https://github.com/langchain-ai/langchain)**: Framework for LLM applications
-- **[LangGraph](https://github.com/langchain-ai/langgraph)**: Graph-based agent orchestration
-- **[OpenAI API](https://openai.com/)**: GPT-4o for reasoning, text-embedding-ada-002 for embeddings
-- **[Pinecone](https://www.pinecone.io/)**: Vector database for semantic search
-- **[Streamlit](https://streamlit.io/)**: Interactive web interface
-- **[SerpAPI](https://serpapi.com/)**: Web search integration
-- **[ArXiv API](https://arxiv.org/help/api)**: Research paper access
-- **[PyPDF](https://pypdf.readthedocs.io/)**: PDF processing
+- **Query Response Time**: 5-15 seconds (depending on tools used)
+- **Embedding Generation**: ~2-3 papers/minute
+- **Vector Search**: <1 second for top-5 retrieval
+- **Supports**: Up to 1000+ papers in the knowledge base
+
 
 ## 📝 Example Queries
 
@@ -269,34 +265,19 @@ Try these queries in the interface:
 - "What is few-shot learning and how does it work?"
 - "Recent developments in computer vision"
 
+## 🛠️ Technologies Used
+
+- **[LangChain](https://github.com/langchain-ai/langchain)**: Framework for LLM applications
+- **[LangGraph](https://github.com/langchain-ai/langgraph)**: Graph-based agent orchestration
+- **[OpenAI API](https://openai.com/)**: GPT-4o for reasoning, text-embedding-ada-002 for embeddings
+- **[Pinecone](https://www.pinecone.io/)**: Vector database for semantic search
+- **[Streamlit](https://streamlit.io/)**: Interactive web interface
+- **[SerpAPI](https://serpapi.com/)**: Web search integration
+- **[ArXiv API](https://arxiv.org/help/api)**: Research paper access
+- **[PyPDF](https://pypdf.readthedocs.io/)**: PDF processing
+
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-
-## 📊 Performance
-
-- **Query Response Time**: 5-15 seconds (depending on tools used)
-- **Embedding Generation**: ~2-3 papers/minute
-- **Vector Search**: <1 second for top-5 retrieval
-- **Supports**: Up to 1000+ papers in the knowledge base
-
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- ArXiv for providing open access to research papers
-- OpenAI for GPT-4 and embedding models
-- LangChain team for the excellent framework
-- Pinecone for vector database infrastructure
-
-## 📧 Contact
-
-Your Name - [@yourhandle](https://twitter.com/yourhandle)
-
-Project Link: [https://github.com/ashaduzzaman-sarker/ResearchAgent](https://github.com/ashaduzzaman-sarker/ResearchAgent)
-
----
