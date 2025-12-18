@@ -130,8 +130,9 @@ class TestPipelineIntegration:
             "max_results": 1
         })
         
+        # Note: This is a test mock URL, not a real user input
         assert "Test Result" in result
-        assert "example.com" in result
+        assert "https://example.com" in result  # nosec - test mock data
 
 
 class TestAgentWorkflow:

@@ -134,7 +134,8 @@ class TestWebSearch:
         assert result is not None
         assert "Test Result 1" in result
         assert "Test Result 2" in result
-        assert "example.com" in result
+        # Note: This is a test mock URL, not user input requiring sanitization
+        assert "https://example.com" in result  # nosec - test mock data
 
     def test_web_search_invalid_query(self, mock_env_vars):
         """Test web search with invalid query."""
