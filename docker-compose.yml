@@ -1,0 +1,44 @@
+# docker-compose.yml
+# Docker Compose configuration for ResearchAgent
+
+version: '3.8'
+
+services:
+  research-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: research-agent
+    ports:
+      - "8501:8501"
+    environment:
+      # Copy from your .env file or set here
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - SERPAPI_API_KEY=${SERPAPI_API_KEY:-}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-research-agent}
+    volumes:
+      # Mount volumes for persistent data
+      - ./files:/app/files
+      - ./logs:/app/logs
+      # Mount config for easy updates
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - research-agent-network
+
+networks:
+  research-agent-network:
+    driver: bridge
+
+volumes:
+  files:
+  logs:

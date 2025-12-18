@@ -1,0 +1,77 @@
+# .dockerignore - Files to exclude from Docker build context
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Documentation
+docs/_build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+files/
+logs/
+*.log
+.env
+*.pdf
+
+# Development
+.pre-commit-config.yaml
+.github/
+tests/
+requirements-dev.txt
+Makefile
+
+# Notebooks (optional, include if you want them in the image)
+notebooks/
+
+# Large files
+*.tar.gz
+*.zip
+*.model

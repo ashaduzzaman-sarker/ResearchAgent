@@ -76,7 +76,9 @@ Research Agent is an end-to-end AI research assistant that combines **Retrieval-
 - Pinecone API key
 - SerpAPI key (optional, for web search)
 
-### Steps
+### Option 1: Local Installation
+
+#### Steps
 
 1. **Clone the repository**
    ```bash
@@ -99,9 +101,15 @@ Research Agent is an end-to-end AI research assistant that combines **Retrieval-
    
    Create a `.env` file in the project root:
    ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+   
+   Required variables:
+   ```bash
    OPENAI_API_KEY=your_openai_api_key_here
    PINECONE_API_KEY=your_pinecone_api_key_here
-   SERPAPI_API_KEY=your_serpapi_api_key_here
+   SERPAPI_API_KEY=your_serpapi_api_key_here  # Optional
 
    # Optional: Disable LangSmith warnings
    LANGCHAIN_TRACING_V2=false
@@ -114,6 +122,55 @@ Research Agent is an end-to-end AI research assistant that combines **Retrieval-
    - Chunking parameters
    - Model selections
    - Pinecone index settings
+
+6. **Verify installation**
+   ```bash
+   python scripts/validate_setup.py
+   ```
+
+### Option 2: Docker Installation
+
+#### Using Docker Compose (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ashaduzzaman-sarker/ResearchAgent.git
+   cd ResearchAgent
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+3. **Build and run with Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access the application**
+   Open your browser to `http://localhost:8501`
+
+5. **View logs**
+   ```bash
+   docker-compose logs -f
+   ```
+
+6. **Stop the application**
+   ```bash
+   docker-compose down
+   ```
+
+#### Using Docker directly
+
+```bash
+# Build the image
+docker build -t research-agent .
+
+# Run the container
+docker run -p 8501:8501 --env-file .env research-agent
+```
 
 ## ⚙️ Configuration
 
