@@ -1,16 +1,29 @@
-openai
-arxiv
-pandas
-requests
-tqdm
-python-dotenv
-ipykernel
-langchain
-langchain-openai
-langchain-community  # For PyPDFLoader, etc.
-langchain-pinecone
-pinecone
-google-search-results  # For SerpAPI
-langgraph
-streamlit
-pyyaml
+# Core AI/ML Libraries
+openai==2.13.0
+langchain==1.2.0
+langchain-openai==1.1.5
+langchain-community==0.4.1
+langchain-pinecone==0.2.13
+langgraph==1.0.5
+
+# Vector Database & Search
+pinecone==8.0.0
+google-search-results==2.4.2
+
+# Data Processing
+pandas==2.3.3
+arxiv==2.3.1
+pypdf==6.4.2
+
+# Utilities
+python-dotenv==1.2.1
+pyyaml==6.0.3
+requests==2.32.5
+tqdm==4.67.1
+
+# Development & Notebook
+ipykernel==7.1.0
+jupyter==1.1.1
+
+# Web Interface
+streamlit==1.52.2
