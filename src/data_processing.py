@@ -1,3 +1,16 @@
+"""
+Data Processing Module
+
+This module handles PDF processing and text chunking for RAG:
+- Loading and parsing PDF documents
+- Splitting text into semantically meaningful chunks
+- Creating an expanded dataset with chunk metadata
+- Maintaining chunk relationships (prechunk/postchunk IDs)
+
+The module uses LangChain's document loaders and text splitters
+for efficient processing of research papers.
+"""
+
 import os
 import logging
 import pandas as pd
@@ -38,6 +51,34 @@ def load_config(config_path="config.yaml"):
 # PDF Chunking
 # ================================
 def load_and_chunk_pdf(pdf_file_name, chunk_size=800, chunk_overlap=100):
+    """
+    Load a PDF file and split it into overlapping text chunks.
+    
+    Uses LangChain's PyPDFLoader for PDF parsing and RecursiveCharacterTextSplitter
+    for intelligent text chunking. The splitter attempts to split on natural
+    boundaries (paragraphs, sentences) while maintaining the specified chunk size.
+    
+    Args:
+        pdf_file_name (str): Path to the PDF file.
+        chunk_size (int): Target size of each chunk in characters.
+        chunk_overlap (int): Number of overlapping characters between chunks
+            to maintain context continuity.
+    
+    Returns:
+        list: List of LangChain Document objects, each containing:
+            - page_content: The text content of the chunk
+            - metadata: Dictionary with page number and other metadata
+    
+    Note:
+        - Returns empty list if file doesn't exist or parsing fails
+        - Uses recursive splitting with multiple separators for natural breaks
+        - Overlap helps maintain semantic continuity between chunks
+    
+    Example:
+        >>> chunks = load_and_chunk_pdf('paper.pdf', chunk_size=800, chunk_overlap=100)
+        >>> print(f"Created {len(chunks)} chunks")
+        >>> print(chunks[0].page_content[:100])
+    """
     if not pdf_file_name or not os.path.exists(pdf_file_name):
         logger.warning(f"PDF not found: {pdf_file_name}")
         return []
@@ -66,6 +107,49 @@ def load_and_chunk_pdf(pdf_file_name, chunk_size=800, chunk_overlap=100):
 # Expand DataFrame with Chunks
 # ================================
 def expand_df(df, chunk_size=800, chunk_overlap=100):
+    """
+    Expand DataFrame by chunking PDFs and creating individual rows for each chunk.
+    
+    Takes a DataFrame of papers and creates a new DataFrame where each row
+    represents a single chunk. Maintains paper metadata and adds chunk-specific
+    information including links to adjacent chunks.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame with paper metadata. Required columns:
+            - pdf_file_name: Path to PDF file
+            - arxiv_id: Unique paper identifier
+            - title: Paper title
+            - summary: Paper abstract
+            - authors: List of authors
+            - pdf_link: URL to PDF
+            - url: URL to ArXiv page
+        chunk_size (int): Target size of each chunk in characters.
+        chunk_overlap (int): Number of overlapping characters between chunks.
+    
+    Returns:
+        pd.DataFrame: Expanded DataFrame with columns:
+            - id: Unique chunk identifier (arxiv_id#chunk_number)
+            - title: Paper title
+            - summary: Paper abstract
+            - authors: List of authors
+            - arxiv_id: Paper identifier
+            - url: ArXiv page URL
+            - chunk: The text content of this chunk
+            - prechunk_id: ID of previous chunk (empty for first chunk)
+            - postchunk_id: ID of next chunk (empty for last chunk)
+    
+    Raises:
+        ValueError: If required columns are missing from input DataFrame.
+    
+    Note:
+        - Chunk IDs enable retrieval of context from adjacent chunks
+        - Progress bar shows chunking progress
+        - Failed PDFs are skipped with warning logs
+    
+    Example:
+        >>> expanded_df = expand_df(papers_df, chunk_size=800, chunk_overlap=100)
+        >>> print(f"Expanded {len(papers_df)} papers into {len(expanded_df)} chunks")
+    """
     required_columns = {"pdf_file_name", "arxiv_id", "title", "summary", "authors", "pdf_link", "url"}
     missing = required_columns - set(df.columns)
     if missing:

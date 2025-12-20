@@ -200,18 +200,42 @@ def main():
 
     if clear_button:
         st.session_state.query_input = ""
-        st.experimental_rerun()
+        st.rerun()
 
     if search_button:
         if not query.strip():
             st.error("⚠️ Please enter a valid query.")
             return
 
+        # Check for API keys before making requests
+        required_keys = {
+            "OPENAI_API_KEY": "OpenAI API key is required for embeddings and LLM",
+            "PINECONE_API_KEY": "Pinecone API key is required for vector search"
+        }
+        
+        missing_keys = []
+        for key, description in required_keys.items():
+            if not os.getenv(key):
+                missing_keys.append(f"❌ {description}")
+        
+        if missing_keys:
+            st.error("**Missing Required API Keys:**")
+            for msg in missing_keys:
+                st.error(msg)
+            st.info("💡 Please configure your .env file with the required API keys. See .env.example for reference.")
+            return
+
         with st.spinner("🤔 Processing your query..."):
-            response = run_agent(query, graph, config)
+            try:
+                response = run_agent(query, graph, config)
+            except Exception as e:
+                st.error(f"❌ An error occurred while processing your query: {str(e)}")
+                logger.error(f"Streamlit error for query '{query}': {e}", exc_info=True)
+                return
 
         if "error" in response:
             st.error(f"❌ Error: {response['error']}")
+            st.info("💡 Try rephrasing your query or check the logs for more details.")
             return
 
         # Display tabs for results

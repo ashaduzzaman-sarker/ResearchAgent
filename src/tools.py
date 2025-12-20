@@ -1,3 +1,14 @@
+"""
+Tools Module - RAG and Web Search
+
+This module implements the core tools used by the research agent:
+1. RAG Search: Semantic search over ArXiv papers using Pinecone vector database
+2. Web Search: Current information retrieval using SerpAPI Google Search
+
+Both tools are implemented as LangChain tools and can be used independently
+or composed in agent workflows.
+"""
+
 import os
 import logging
 from langchain_openai import OpenAIEmbeddings
@@ -26,16 +37,52 @@ logger = logging.getLogger(__name__)
 def rag_search(query: str, index_name: str = "research-agent-index", 
                namespace: str = "arxiv_chunks", top_k: int = 5) -> str:
     """
-    Retrieve relevant document chunks from Pinecone based on the query.
+    Retrieve relevant document chunks from Pinecone based on semantic similarity.
+    
+    This tool implements Retrieval-Augmented Generation (RAG) by:
+    1. Converting the query to an embedding using OpenAI's embedding model
+    2. Searching Pinecone vector database for similar document chunks
+    3. Returning formatted results with metadata and relevance scores
     
     Args:
-        query: The search query string
-        index_name: Pinecone index name (default: "research-agent-index")
-        namespace: Pinecone namespace (default: "arxiv_chunks")
-        top_k: Number of top results to retrieve (default: 5)
+        query (str): The search query string (natural language question or keywords)
+        index_name (str): Name of the Pinecone index to search.
+            Default: "research-agent-index"
+        namespace (str): Pinecone namespace containing the vectors.
+            Default: "arxiv_chunks"
+        top_k (int): Number of most relevant results to return.
+            Default: 5
     
     Returns:
-        str: Formatted string of retrieved documents with metadata
+        str: Formatted string containing:
+            - Document title and ArXiv ID
+            - URL to the paper
+            - Relevance score (0.0-1.0, higher is more relevant)
+            - Summary excerpt
+            - Content excerpt from the matching chunk
+            
+            Returns error message if search fails.
+    
+    Environment Variables Required:
+        - OPENAI_API_KEY: For generating query embeddings
+        - PINECONE_API_KEY: For accessing vector database
+    
+    Example:
+        >>> result = rag_search.invoke({
+        ...     "query": "What are transformer models?",
+        ...     "top_k": 3
+        ... })
+        >>> print(result)
+        Retrieved 3 relevant research papers:
+        
+        Document 1:
+        Title: Attention Is All You Need
+        ...
+    
+    Note:
+        - Scores above 0.8 typically indicate high relevance
+        - Results are ordered by relevance (highest first)
+        - Long texts are truncated for readability
     """
     try:
         # Validate query
@@ -136,14 +183,48 @@ Content Excerpt: {text_truncated}
 @tool
 def web_search(query: str, max_results: int = 3) -> str:
     """
-    Perform a web search using SerpAPI Google Search.
+    Perform a web search using SerpAPI to get current information from Google.
+    
+    This tool enables the agent to access up-to-date information beyond
+    the research papers in the knowledge base. Useful for:
+    - Current events and recent developments
+    - General knowledge questions
+    - Real-time information (news, statistics, etc.)
+    - Supplementary context for research queries
     
     Args:
-        query: The search query string
-        max_results: Maximum number of results to return (default: 3)
+        query (str): The search query (natural language or keywords)
+        max_results (int): Maximum number of search results to return.
+            Default: 3
     
     Returns:
-        str: Formatted string of search results with titles, links, and snippets
+        str: Formatted string containing:
+            - Result title
+            - URL/link to the page
+            - Snippet/description from the search result
+            
+            Returns error message if search fails.
+    
+    Environment Variables Required:
+        - SERPAPI_API_KEY: For accessing Google Search via SerpAPI
+    
+    Example:
+        >>> result = web_search.invoke({
+        ...     "query": "latest developments in GPT-4",
+        ...     "max_results": 3
+        ... })
+        >>> print(result)
+        Retrieved 3 web search results:
+        
+        Result 1:
+        Title: GPT-4 Technical Report
+        URL: https://...
+        Snippet: ...
+    
+    Note:
+        - Results reflect current web content (unlike static research papers)
+        - Snippets are truncated for readability
+        - Respects SerpAPI rate limits
     """
     try:
         # Validate query

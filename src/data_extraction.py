@@ -1,3 +1,15 @@
+"""
+Data Extraction Module
+
+This module handles data extraction from ArXiv, including:
+- Searching and fetching paper metadata from ArXiv API
+- Downloading PDF files from ArXiv
+- Saving metadata to JSON format
+
+The module uses the arxiv Python library for API interactions and
+requests for PDF downloads with progress tracking via tqdm.
+"""
+
 import os
 import json
 import logging
@@ -30,7 +42,24 @@ logger = logging.getLogger(__name__)
 # =============================
 
 def load_config(config_path='config.yaml'):
-    """Load configuration from a YAML file."""
+    """
+    Load configuration from a YAML file.
+    
+    Args:
+        config_path (str): Path to the YAML configuration file.
+            Defaults to 'config.yaml' in the current directory.
+    
+    Returns:
+        dict: Configuration dictionary containing all settings.
+    
+    Raises:
+        FileNotFoundError: If the configuration file does not exist.
+        yaml.YAMLError: If there's an error parsing the YAML file.
+    
+    Example:
+        >>> config = load_config('config.yaml')
+        >>> arxiv_settings = config['data_extraction']['arxiv']
+    """
     try:
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
@@ -45,7 +74,23 @@ def load_config(config_path='config.yaml'):
 
 
 def load_env():
-    """Load environment variables from a .env file."""
+    """
+    Load environment variables from a .env file.
+    
+    Loads API keys and other sensitive configuration from .env file
+    into the environment. This includes:
+    - OPENAI_API_KEY
+    - PINECONE_API_KEY
+    - SERPAPI_API_KEY
+    - LANGCHAIN_TRACING_V2
+    
+    Raises:
+        Exception: If there's an error loading the .env file.
+    
+    Example:
+        >>> load_env()
+        >>> api_key = os.getenv('OPENAI_API_KEY')
+    """
     try:
         load_dotenv()
         logger.info("Environment variables (.env file) loaded successfully.")
@@ -59,7 +104,39 @@ def load_env():
 # =============================
 
 def extract_arxiv_data(search_query='cat:cs.AI', max_results=10, json_file_path='files/arxiv_dataset.json'):
-    """Extract research papers from ArXiv and save metadata to a JSON file."""
+    """
+    Extract research papers from ArXiv and save metadata to a JSON file.
+    
+    Searches ArXiv using the provided query, fetches paper metadata,
+    and saves it to a JSON file. The function also returns a pandas
+    DataFrame for immediate use.
+    
+    Args:
+        search_query (str): ArXiv search query. Can use:
+            - Category queries: 'cat:cs.AI' for AI papers
+            - Keywords: 'transformer attention'
+            - Complex queries: 'cat:cs.AI AND transformer'
+        max_results (int): Maximum number of papers to fetch.
+        json_file_path (str): Path where the JSON file will be saved.
+    
+    Returns:
+        pd.DataFrame: DataFrame containing paper metadata with columns:
+            - title: Paper title
+            - summary: Paper abstract
+            - authors: List of author names
+            - arxiv_id: ArXiv paper ID
+            - pdf_link: Direct link to PDF
+            - url: ArXiv abstract page URL
+            - published: Publication date (YYYY-MM-DD)
+            - updated: Last update date (YYYY-MM-DD)
+    
+    Raises:
+        Exception: If there's an error fetching data from ArXiv.
+    
+    Example:
+        >>> df = extract_arxiv_data('cat:cs.AI', max_results=5)
+        >>> print(df['title'].tolist())
+    """
     try:
         os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
         logger.info(f"Output directory ensured at {os.path.dirname(json_file_path)}.")
@@ -114,7 +191,35 @@ def extract_arxiv_data(search_query='cat:cs.AI', max_results=10, json_file_path=
 # =============================
 
 def download_pdfs(df, download_folder='files/pdfs'):
-    """Download PDFs from ArXiv URLs and add 'pdf_file_name' column."""
+    """
+    Download PDF files from ArXiv and add file paths to DataFrame.
+    
+    Downloads PDFs for all papers in the DataFrame, skipping files
+    that already exist locally. Adds a 'pdf_file_name' column with
+    the local file path for each paper.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing ArXiv paper metadata
+            with 'pdf_link' and 'arxiv_id' columns.
+        download_folder (str): Directory where PDFs will be saved.
+    
+    Returns:
+        pd.DataFrame: Input DataFrame with added 'pdf_file_name' column
+            containing local file paths (or None for failed downloads).
+    
+    Raises:
+        Exception: If there's a critical error in the download process.
+    
+    Note:
+        - Uses streaming downloads for memory efficiency
+        - Implements retry-friendly design (skips existing files)
+        - Individual download failures are logged but don't stop the process
+    
+    Example:
+        >>> df = download_pdfs(df, 'files/pdfs')
+        >>> successful = df['pdf_file_name'].notna().sum()
+        >>> print(f"Downloaded {successful} PDFs")
+    """
     try:
         if df.empty:
             logger.warning("DataFrame is empty. No PDFs to download.")

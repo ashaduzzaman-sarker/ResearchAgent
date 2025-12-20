@@ -1,0 +1,113 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "research-agent"
+version = "1.0.0"
+description = "AI-powered research assistant with RAG and web search capabilities"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Ashaduzzaman Sarker", email = "ashaduzzaman.sarker@example.com"}
+]
+keywords = ["ai", "rag", "research", "arxiv", "langchain", "pinecone"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "openai>=2.13.0",
+    "langchain>=1.2.0",
+    "langchain-openai>=1.1.5",
+    "langchain-community>=0.4.1",
+    "langchain-pinecone>=0.2.13",
+    "langgraph>=1.0.5",
+    "pinecone>=8.0.0",
+    "google-search-results>=2.4.2",
+    "pandas>=2.3.3",
+    "arxiv>=2.3.1",
+    "pypdf>=6.4.2",
+    "python-dotenv>=1.2.1",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "tqdm>=4.67.1",
+    "ipykernel>=7.1.0",
+    "jupyter>=1.1.1",
+    "streamlit>=1.52.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-asyncio>=0.25.2",
+    "pytest-mock>=3.14.0",
+    "black>=25.1.0",
+    "flake8>=7.1.1",
+    "mypy>=1.14.1",
+    "ruff>=0.9.1",
+    "isort>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ashaduzzaman-sarker/ResearchAgent"
+Repository = "https://github.com/ashaduzzaman-sarker/ResearchAgent"
+Issues = "https://github.com/ashaduzzaman-sarker/ResearchAgent/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers --cov=src --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "ANN", "S", "B", "A", "C4", "DTZ", "T10", "EM", "ISC", "ICN", "PIE", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "ARG", "PTH", "PD", "PLE", "PLR", "PLW", "TRY", "NPY", "RUF"]
+ignore = ["ANN101", "ANN102", "ANN401", "S101", "PLR0913"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
