@@ -66,22 +66,40 @@ def initialize_graph():
         st.error("Failed to initialize agent graph.")
         raise
 
-def run_agent(query: str, graph, config: dict) -> dict:
+def run_agent(query: str, graph, config: dict, resume_state: dict | None = None, approved: bool = False) -> dict:
     """Execute agent query and return structured response."""
     if not query or not isinstance(query, str) or not query.strip():
         logger.warning("Empty or invalid query submitted")
         return {"error": "Invalid or empty query"}
 
     try:
-        initial_state = {
-            "query": query,
-            "messages": [{"role": "user", "content": query}],
-            "retrieved_docs": "",
-            "web_results": "",
-            "final_answer": "",
-            "tools_to_use": [],
-            "iteration": 0
-        }
+        if resume_state:
+            initial_state = resume_state
+            initial_state["approved"] = approved
+            initial_state["awaiting_approval"] = False
+            initial_state["stage"] = "approved"
+        else:
+            initial_state = {
+                "query": query,
+                "messages": [{"role": "user", "content": query}],
+                "retrieved_docs": "",
+                "web_results": "",
+                "tools_to_use": [],
+                "iteration": 0,
+                "research_notes": "",
+                "research_summary": "",
+                "sources": "",
+                "research_complete": False,
+                "approval_required": config.get("agent", {}).get("hitl", {}).get("enabled", True),
+                "approved": not config.get("agent", {}).get("hitl", {}).get("enabled", True),
+                "awaiting_approval": False,
+                "draft_report": "",
+                "edited_report": "",
+                "fact_check_report": "",
+                "final_report": "",
+                "final_answer": "",
+                "stage": "initialized"
+            }
 
         logger.info("Executing agent for query: %s", query)
         result = graph.invoke(initial_state)
@@ -92,8 +110,16 @@ def run_agent(query: str, graph, config: dict) -> dict:
             "tools_used": result.get("tools_to_use", []),
             "retrieved_docs": result.get("retrieved_docs", ""),
             "web_results": result.get("web_results", ""),
+            "research_notes": result.get("research_notes", ""),
+            "draft_report": result.get("draft_report", ""),
+            "edited_report": result.get("edited_report", ""),
+            "fact_check_report": result.get("fact_check_report", ""),
+            "final_report": result.get("final_report", ""),
             "final_answer": result.get("final_answer", "No answer generated"),
-            "messages": result.get("messages", [])
+            "awaiting_approval": result.get("awaiting_approval", False),
+            "stage": result.get("stage", ""),
+            "messages": result.get("messages", []),
+            "state": result
         }
 
         # Save response to file
@@ -110,6 +136,27 @@ def run_agent(query: str, graph, config: dict) -> dict:
         with open(output_json, "w", encoding="utf-8") as f:
             json.dump(existing_data, f, ensure_ascii=False, indent=4)
         logger.info("Saved response to %s", output_json)
+
+        # Save final reports separately when available
+        if response_data.get("final_report"):
+            reports_path = config.get("agent", {}).get("output", {}).get("reports_path", "outputs/reports.json")
+            os.makedirs(os.path.dirname(reports_path), exist_ok=True)
+            reports_data = []
+            if os.path.exists(reports_path):
+                with open(reports_path, "r", encoding="utf-8") as f:
+                    try:
+                        reports_data = json.load(f)
+                    except json.JSONDecodeError:
+                        reports_data = []
+            reports_data.append({
+                "timestamp": response_data["timestamp"],
+                "query": query,
+                "final_report": response_data["final_report"],
+                "fact_check_report": response_data.get("fact_check_report", "")
+            })
+            with open(reports_path, "w", encoding="utf-8") as f:
+                json.dump(reports_data, f, ensure_ascii=False, indent=4)
+            logger.info("Saved report to %s", reports_path)
 
         return response_data
 
@@ -153,25 +200,29 @@ def main():
 """, unsafe_allow_html=True)
 
 
-    st.markdown('<div class="main-header">🔍 Research Agent Interface</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">AI-powered research assistant for ArXiv papers and web search</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🧭 Multi-Agent Research Team</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Researcher → Writer → Editor → Fact-Checker with Human-in-the-loop approval</div>', unsafe_allow_html=True)
 
     # Sidebar
     with st.sidebar:
         st.header("ℹ️ About")
         st.markdown("""
-        This Research Agent can:
-        - 🔬 Search ArXiv AI/ML papers
-        - 🌐 Perform web searches
-        - 🤖 Generate GPT-4 powered answers
+        This Multi-Agent Team can:
+        - 🔬 Research from ArXiv and the web
+        - ✍️ Draft a deep-dive report (~2,000 words)
+        - ✏️ Edit for clarity and structure
+        - ✅ Fact-check and add caveats
+        - 🛑 Pause for human approval before writing
         """)
 
         st.header("⚙️ Configuration")
         st.markdown(f"""
         - **LLM Model**: {config['agent'].get('llm_model', 'Not set')}
         - **RAG Top-K**: {config['agent']['tools']['rag'].get('top_k', 'N/A')}
-        - **Web Results**: {config['agent']['tools']['serpapi'].get('max_results', 'N/A')}
+        - **Web Provider**: {config['agent']['tools']['web'].get('provider', 'N/A')}
+        - **Web Results**: {config['agent']['tools']['web'].get('max_results', 'N/A')}
         - **Index**: {config['embeddings']['pinecone'].get('index_name', 'N/A')}
+        - **HITL Enabled**: {config['agent']['hitl'].get('enabled', True)}
         """)
 
         st.header("📝 Example Queries")
@@ -208,10 +259,15 @@ def main():
             return
 
         # Check for API keys before making requests
+        web_provider = config["agent"]["tools"]["web"].get("provider", "serper").lower()
         required_keys = {
             "OPENAI_API_KEY": "OpenAI API key is required for embeddings and LLM",
             "PINECONE_API_KEY": "Pinecone API key is required for vector search"
         }
+        if web_provider == "serper":
+            required_keys["SERPER_API_KEY"] = "Serper API key is required for web search"
+        else:
+            required_keys["SERPAPI_API_KEY"] = "SerpAPI key is required for web search"
         
         missing_keys = []
         for key, description in required_keys.items():
@@ -228,53 +284,102 @@ def main():
         with st.spinner("🤔 Processing your query..."):
             try:
                 response = run_agent(query, graph, config)
+                st.session_state.last_response = response
             except Exception as e:
                 st.error(f"❌ An error occurred while processing your query: {str(e)}")
                 logger.error(f"Streamlit error for query '{query}': {e}", exc_info=True)
                 return
 
-        if "error" in response:
-            st.error(f"❌ Error: {response['error']}")
-            st.info("💡 Try rephrasing your query or check the logs for more details.")
-            return
+    response = st.session_state.get("last_response")
+    if not response:
+        return
 
-        # Display tabs for results
-        tabs = st.tabs(["📝 Answer", "📚 ArXiv Papers", "🌐 Web Results", "💬 Message History"])
-        with tabs[0]:
-            st.markdown("### 📝 Final Answer")
-            st.markdown(f'<div class="result-box">{response.get("final_answer", "No answer generated")}</div>', unsafe_allow_html=True)
-            tools_used = response.get("tools_used", [])
-            if tools_used:
-                st.markdown(f"**Tools Used**: {', '.join(tools_used)}")
+    if "error" in response:
+        st.error(f"❌ Error: {response['error']}")
+        st.info("💡 Try rephrasing your query or check the logs for more details.")
+        return
 
-        with tabs[1]:
-            st.markdown("### 📚 Retrieved ArXiv Documents")
-            st.text_area("Documents", response.get("retrieved_docs", "No ArXiv documents retrieved."), height=400)
+    # HITL approval UI
+    if response.get("awaiting_approval"):
+        st.warning("🛑 Research complete. Awaiting your approval to proceed to writing.")
+        st.markdown("### 🧾 Research Notes")
+        st.text_area("Research Notes", response.get("research_notes", ""), height=300)
+        st.markdown("### 📚 Sources")
+        st.text_area("Sources", response.get("state", {}).get("sources", ""), height=250)
 
-        with tabs[2]:
-            st.markdown("### 🌐 Web Search Results")
-            st.text_area("Web Results", response.get("web_results", "No web results retrieved."), height=400)
+        col_approve, col_reject = st.columns([1, 1])
+        if col_approve.button("✅ Approve and Write Report", type="primary"):
+            with st.spinner("✍️ Writing report..."):
+                resumed = run_agent(query, graph, config, resume_state=response.get("state", {}), approved=True)
+                st.session_state.last_response = resumed
+                st.rerun()
+        if col_reject.button("🛑 Reject and Stop"):
+            st.session_state.last_response = None
+            st.info("Approval rejected. You can refine the query and retry.")
+        return
 
-        with tabs[3]:
-            st.markdown("### 💬 Message History")
-            messages = response.get("messages", [])
-            if messages:
-                for msg in messages:
-                    role = msg.get("role", "unknown").capitalize()
-                    content = msg.get("content", "")
-                    color = "blue" if role == "User" else "green" if role == "Assistant" else "black"
-                    st.markdown(f"**:<span style='color:{color}'>{role}</span>**: {content}", unsafe_allow_html=True)
-                    st.divider()
-            else:
-                st.info("No message history available.")
+    # Display tabs for results
+    tabs = st.tabs([
+        "🧩 Final Report",
+        "🧾 Research Notes",
+        "✍️ Draft",
+        "✏️ Edited",
+        "✅ Fact Check",
+        "📚 ArXiv Papers",
+        "🌐 Web Results",
+        "💬 Message History"
+    ])
+    with tabs[0]:
+        st.markdown("### 🧩 Final Report")
+        st.markdown(f'<div class="result-box">{response.get("final_report", "No report generated")}</div>', unsafe_allow_html=True)
+        tools_used = response.get("tools_used", [])
+        if tools_used:
+            st.markdown(f"**Tools Used**: {', '.join(tools_used)}")
 
-        # Download JSON
-        st.download_button(
-            "📥 Download Response (JSON)",
-            data=json.dumps(response, indent=2, ensure_ascii=False),
-            file_name=f"response_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json"
-        )
+    with tabs[1]:
+        st.markdown("### 🧾 Research Notes")
+        st.text_area("Research Notes", response.get("research_notes", ""), height=400)
+
+    with tabs[2]:
+        st.markdown("### ✍️ Draft Report")
+        st.text_area("Draft", response.get("draft_report", ""), height=400)
+
+    with tabs[3]:
+        st.markdown("### ✏️ Edited Report")
+        st.text_area("Edited", response.get("edited_report", ""), height=400)
+
+    with tabs[4]:
+        st.markdown("### ✅ Fact-Check Report")
+        st.text_area("Fact Check", response.get("fact_check_report", ""), height=400)
+
+    with tabs[5]:
+        st.markdown("### 📚 Retrieved ArXiv Documents")
+        st.text_area("Documents", response.get("retrieved_docs", "No ArXiv documents retrieved."), height=400)
+
+    with tabs[6]:
+        st.markdown("### 🌐 Web Search Results")
+        st.text_area("Web Results", response.get("web_results", "No web results retrieved."), height=400)
+
+    with tabs[7]:
+        st.markdown("### 💬 Message History")
+        messages = response.get("messages", [])
+        if messages:
+            for msg in messages:
+                role = msg.get("role", "unknown").capitalize()
+                content = msg.get("content", "")
+                color = "blue" if role == "User" else "green" if role == "Assistant" else "black"
+                st.markdown(f"**:<span style='color:{color}'>{role}</span>**: {content}", unsafe_allow_html=True)
+                st.divider()
+        else:
+            st.info("No message history available.")
+
+    # Download JSON
+    st.download_button(
+        "📥 Download Response (JSON)",
+        data=json.dumps(response, indent=2, ensure_ascii=False),
+        file_name=f"response_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        mime="application/json"
+    )
 
     # Footer
     st.markdown("---")

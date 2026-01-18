@@ -231,19 +231,42 @@ def run_interactive_query():
                 "messages": [{"role": "user", "content": query}],
                 "retrieved_docs": "",
                 "web_results": "",
-                "final_answer": "",
                 "tools_to_use": [],
-                "iteration": 0
+                "iteration": 0,
+                "research_notes": "",
+                "research_summary": "",
+                "sources": "",
+                "research_complete": False,
+                "approval_required": config.get("agent", {}).get("hitl", {}).get("enabled", True),
+                "approved": not config.get("agent", {}).get("hitl", {}).get("enabled", True),
+                "awaiting_approval": False,
+                "draft_report": "",
+                "edited_report": "",
+                "fact_check_report": "",
+                "final_report": "",
+                "final_answer": "",
+                "stage": "initialized"
             }
             
             try:
                 result = graph.invoke(initial_state)
+
+                if result.get("awaiting_approval"):
+                    approval = input("\n🛑 Research complete. Approve to proceed with writing? (y/n): ").strip().lower()
+                    if approval in ["y", "yes"]:
+                        result["approved"] = True
+                        result["awaiting_approval"] = False
+                        result["stage"] = "approved"
+                        result = graph.invoke(result)
+                    else:
+                        print("\nReport generation cancelled by user.")
+                        continue
                 
                 # Display results
                 print("\n" + "="*80)
-                print("ANSWER")
+                print("FINAL REPORT")
                 print("="*80)
-                print(result.get("final_answer", "No answer generated"))
+                print(result.get("final_report", result.get("final_answer", "No report generated")))
                 print("="*80)
                 
                 tools_used = result.get("tools_to_use", [])

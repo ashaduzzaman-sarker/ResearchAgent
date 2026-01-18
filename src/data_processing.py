@@ -16,7 +16,7 @@ import logging
 import pandas as pd
 from tqdm import tqdm
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import yaml
 
 
@@ -193,6 +193,15 @@ def main():
             chunk_size=chunk_conf["chunk_size"],
             chunk_overlap=chunk_conf["chunk_overlap"]
         )
+
+        def sanitize_value(value):
+            if isinstance(value, str):
+                return value.encode("utf-8", "replace").decode("utf-8")
+            if isinstance(value, list):
+                return [sanitize_value(v) for v in value]
+            return value
+
+        expanded_df = expanded_df.applymap(sanitize_value)
 
         output_json = "files/expanded_dataset.json"
         os.makedirs(os.path.dirname(output_json), exist_ok=True)

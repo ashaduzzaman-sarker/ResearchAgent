@@ -3,7 +3,7 @@ Tools Module - RAG and Web Search
 
 This module implements the core tools used by the research agent:
 1. RAG Search: Semantic search over ArXiv papers using Pinecone vector database
-2. Web Search: Current information retrieval using SerpAPI Google Search
+2. Web Search: Current information retrieval using Serper or SerpAPI Google Search
 
 Both tools are implemented as LangChain tools and can be used independently
 or composed in agent workflows.
@@ -181,9 +181,9 @@ Content Excerpt: {text_truncated}
 # Web Search Tool
 # ================================
 @tool
-def web_search(query: str, max_results: int = 3) -> str:
+def web_search(query: str, max_results: int = 3, provider: str = "serpapi") -> str:
     """
-    Perform a web search using SerpAPI to get current information from Google.
+    Perform a web search using Serper or SerpAPI to get current information from Google.
     
     This tool enables the agent to access up-to-date information beyond
     the research papers in the knowledge base. Useful for:
@@ -196,6 +196,7 @@ def web_search(query: str, max_results: int = 3) -> str:
         query (str): The search query (natural language or keywords)
         max_results (int): Maximum number of search results to return.
             Default: 3
+        provider (str): "serper" or "serpapi".
     
     Returns:
         str: Formatted string containing:
@@ -206,6 +207,7 @@ def web_search(query: str, max_results: int = 3) -> str:
             Returns error message if search fails.
     
     Environment Variables Required:
+        - SERPER_API_KEY: For accessing Google Search via Serper
         - SERPAPI_API_KEY: For accessing Google Search via SerpAPI
     
     Example:
@@ -222,9 +224,9 @@ def web_search(query: str, max_results: int = 3) -> str:
         Snippet: ...
     
     Note:
-        - Results reflect current web content (unlike static research papers)
-        - Snippets are truncated for readability
-        - Respects SerpAPI rate limits
+        # Results reflect current web content (unlike static research papers)
+        # Snippets are truncated for readability
+        # Respects provider rate limits
     """
     try:
         # Validate query
@@ -232,28 +234,47 @@ def web_search(query: str, max_results: int = 3) -> str:
             logger.error("Invalid query provided to web_search")
             return "Error: Invalid or empty query provided"
 
-        # Get API key
-        serpapi_key = os.getenv("SERPAPI_API_KEY")
-        if not serpapi_key:
-            logger.error("SERPAPI_API_KEY not found in environment variables")
-            return "Error: SERPAPI_API_KEY not configured"
+        provider_normalized = (provider or "serpapi").lower()
 
-        # Perform search
-        try:
-            params = {
-                "q": query,
-                "api_key": serpapi_key,
-                "num": max_results,
-                "engine": "google"
-            }
-            search = GoogleSearch(params)
-            search_results = search.get_dict()
-        except Exception as e:
-            logger.error("Failed to perform SerpAPI search: %s", e)
-            return f"Error: Failed to perform web search - {str(e)}"
+        if provider_normalized == "serper":
+            serper_key = os.getenv("SERPER_API_KEY")
+            if not serper_key:
+                logger.error("SERPER_API_KEY not found in environment variables")
+                return "Error: SERPER_API_KEY not configured"
 
-        # Extract organic results
-        results = search_results.get("organic_results", [])
+            try:
+                import requests
+                headers = {
+                    "X-API-KEY": serper_key,
+                    "Content-Type": "application/json"
+                }
+                payload = {"q": query, "num": max_results}
+                response = requests.post("https://google.serper.dev/search", headers=headers, json=payload, timeout=30)
+                response.raise_for_status()
+                search_results = response.json()
+                results = search_results.get("organic", [])
+            except Exception as e:
+                logger.error("Failed to perform Serper search: %s", e)
+                return f"Error: Failed to perform web search - {str(e)}"
+        else:
+            serpapi_key = os.getenv("SERPAPI_API_KEY")
+            if not serpapi_key:
+                logger.error("SERPAPI_API_KEY not found in environment variables")
+                return "Error: SERPAPI_API_KEY not configured"
+
+            try:
+                params = {
+                    "q": query,
+                    "api_key": serpapi_key,
+                    "num": max_results,
+                    "engine": "google"
+                }
+                search = GoogleSearch(params)
+                search_results = search.get_dict()
+                results = search_results.get("organic_results", [])
+            except Exception as e:
+                logger.error("Failed to perform SerpAPI search: %s", e)
+                return f"Error: Failed to perform web search - {str(e)}"
         
         if not results:
             logger.info("No web search results found for query: %s", query)

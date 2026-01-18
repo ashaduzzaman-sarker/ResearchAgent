@@ -81,7 +81,8 @@ def load_env():
     into the environment. This includes:
     - OPENAI_API_KEY
     - PINECONE_API_KEY
-    - SERPAPI_API_KEY
+    - SERPER_API_KEY (optional)
+    - SERPAPI_API_KEY (optional)
     - LANGCHAIN_TRACING_V2
     
     Raises:

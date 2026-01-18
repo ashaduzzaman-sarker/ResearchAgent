@@ -22,17 +22,19 @@
 
 ## 🎯 Overview
 
-Research Agent is an end-to-end AI research assistant that combines **Retrieval-Augmented Generation (RAG)** with **web search** capabilities to answer complex research questions. It automatically extracts papers from ArXiv, processes them into searchable chunks, stores embeddings in Pinecone, and uses GPT-4 to generate intelligent responses.
+Research Agent is a multi-agent autonomous research team that combines **Retrieval-Augmented Generation (RAG)** with **web search** to produce deep-dive reports. It automatically extracts papers from ArXiv, processes them into searchable chunks, stores embeddings in Pinecone, and orchestrates **Researcher → Writer → Editor → Fact-Checker** agents to generate a ~2,000-word report.
 
 ## ✨ Features
 
+- 🧭 **Multi-Agent Orchestration**: Researcher, Writer, Editor, Fact-Checker agents working in sequence
+- 🛑 **Human-in-the-Loop (HITL)**: Pauses for user approval before moving from research to writing
 - 🔍 **Intelligent Query Classification**: Automatically determines whether to use RAG search, web search, or both
 - 📚 **ArXiv Integration**: Fetches and processes the latest AI/ML research papers
 - 🧠 **Vector Search**: Uses Pinecone for efficient semantic search over research papers
-- 🌐 **Web Search**: Integrates SerpAPI for current information and general knowledge
-- 🤖 **GPT-4 Powered**: Generates comprehensive, well-cited answers
-- 💬 **Interactive UI**: Beautiful Streamlit interface for easy interaction
-- 🔄 **Complete Pipeline**: Automated workflow from data extraction to answer generation
+- 🌐 **Web Search**: Integrates Serper or SerpAPI for current information and general knowledge
+- ✍️ **Deep-Dive Reports**: Produces ~2,000-word structured reports with citations
+- 💬 **Interactive UI**: Streamlit interface with stage-by-stage visibility
+- 🔄 **Complete Pipeline**: Automated workflow from data extraction to report generation
 - 📊 **Logging & Monitoring**: Comprehensive logging for debugging and monitoring
 
 ## 🏗️ Architecture
@@ -41,30 +43,36 @@ Research Agent is an end-to-end AI research assistant that combines **Retrieval-
 ┌─────────────┐
 │  User Query │
 └──────┬──────┘
-       │
-       ▼
+  │
+  ▼
 ┌──────────────────┐
-│ Query Classifier │ ◄─── GPT-4o-mini
+│   Researcher     │ ◄─── RAG + Web Search
 └──────┬───────────┘
-       │
-       ├─────────────┬─────────────┐
-       ▼             ▼             ▼
-  ┌────────┐   ┌──────────┐   ┌─────────┐
-  │  RAG   │   │   Web    │   │  Both   │
-  │ Search │   │  Search  │   │ Enabled │
-  └────┬───┘   └────┬─────┘   └────┬────┘
-       │            │              │
-       └────────────┴──────────────┘
-                    │
-                    ▼
-          ┌──────────────────┐
-          │ Answer Generator │ ◄─── GPT-4o
-          └────────┬─────────┘
-                   │
-                   ▼
-            ┌─────────────┐
-            │ Final Answer│
-            └─────────────┘
+  │
+  ▼
+┌──────────────────┐
+│  HITL Approval   │ ◄─── User approves
+└──────┬───────────┘
+  │
+  ▼
+┌──────────────────┐
+│     Writer       │ ◄─── Draft ~2,000 words
+└──────┬───────────┘
+  │
+  ▼
+┌──────────────────┐
+│     Editor       │ ◄─── Improve clarity/structure
+└──────┬───────────┘
+  │
+  ▼
+┌──────────────────┐
+│  Fact-Checker    │ ◄─── Verify claims
+└──────┬───────────┘
+  │
+  ▼
+┌──────────────────┐
+│   Final Report   │
+└──────────────────┘
 ```
 
 ## 🚀 Installation
@@ -74,6 +82,7 @@ Research Agent is an end-to-end AI research assistant that combines **Retrieval-
 - Python 3.12 or higher
 - OpenAI API key
 - Pinecone API key
+- Serper API key (recommended, for web search)
 - SerpAPI key (optional, for web search)
 
 ### Option 1: Local Installation
@@ -109,7 +118,8 @@ Research Agent is an end-to-end AI research assistant that combines **Retrieval-
    ```bash
    OPENAI_API_KEY=your_openai_api_key_here
    PINECONE_API_KEY=your_pinecone_api_key_here
-   SERPAPI_API_KEY=your_serpapi_api_key_here  # Optional
+  SERPER_API_KEY=your_serper_api_key_here    # Preferred
+  SERPAPI_API_KEY=your_serpapi_api_key_here  # Optional
 
    # Optional: Disable LangSmith warnings
    LANGCHAIN_TRACING_V2=false
@@ -194,12 +204,25 @@ embeddings:
     namespace: "arxiv_chunks"
 
 agent:
-  llm_model: "gpt-4o"          # Main LLM for answers
+  llm_model: "gpt-4o"          # Main LLM for agents
+  report:
+    target_word_count: 2000
+    sections:
+      - "Executive Summary"
+      - "Background"
+      - "Key Findings"
+      - "Analysis"
+      - "Implications"
+      - "Open Questions"
+      - "References"
+  hitl:
+    enabled: true
   tools:
     rag:
       top_k: 5                  # Number of documents to retrieve
-    serpapi:
-      max_results: 3            # Number of web results
+    web:
+      provider: "serper"        # serper | serpapi
+      max_results: 5            # Number of web results
 ```
 
 ## 💻 Usage
@@ -242,7 +265,7 @@ python src/data_processing.py
 # Only generate embeddings
 python src/embeddings.py
 
-# Only run the agent (requires prior steps to be completed)
+# Run the multi-agent workflow
 python src/agent_graph.py
 ```
 
@@ -286,10 +309,6 @@ ResearchAgent/
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py                # Test fixtures and configuration
-│   ├── test_data_extraction.py   # Unit tests for data extraction
-│   ├── test_data_processing.py   # Unit tests for data processing
-│   └── test_tools.py              # Unit tests for RAG and web search
-├── notebooks/
 │   └── research_agent.ipynb       # Jupyter notebook demo
 ├── streamlit_app.py               # Streamlit web interface
 ├── config.yaml                    # Pipeline configuration
@@ -327,19 +346,19 @@ ResearchAgent/
 - Stores metadata for retrieval
 
 ### 4. Agent Execution
-- **Query Classification**: LLM determines which tools to use
-- **RAG Search**: Retrieves relevant chunks from Pinecone
-- **Web Search**: Fetches current information from the web (optional)
-- **Answer Generation**: GPT-4 synthesizes information into a comprehensive answer
+- **Researcher**: Classifies the query and gathers sources via RAG and web search
+- **HITL Approval**: Pauses for user approval before writing
+- **Writer**: Produces a ~2,000-word structured draft
+- **Editor**: Improves clarity and structure
+- **Fact-Checker**: Flags uncertain claims and missing citations
+- **Finalization**: Generates the final report with caveats and references
 
 ### 5. LangGraph Workflow
 
 The agent uses a state machine workflow:
 
 ```
-START → Classify Query → [RAG Search] → [Web Search] → Generate Answer → END
-                     ↓                                        ↑
-                     └────────────────────────────────────────┘
+START → Researcher → HITL Approval → Writer → Editor → Fact-Checker → Final Report → END
 ```
 
 ## 📊 Performance
@@ -367,7 +386,8 @@ Try these queries in the interface:
 - **[OpenAI API](https://openai.com/)** (v2.13.0): GPT-4o for reasoning, text-embedding-ada-002 for embeddings
 - **[Pinecone](https://www.pinecone.io/)** (v8.0.0): Serverless vector database for semantic search
 - **[Streamlit](https://streamlit.io/)** (v1.52.2): Interactive web interface
-- **[SerpAPI](https://serpapi.com/)** (v2.4.2): Web search integration
+- **Serper API**: Web search integration (recommended)
+- **[SerpAPI](https://serpapi.com/)** (v2.4.2): Optional web search integration
 - **[ArXiv API](https://arxiv.org/help/api)** (v2.3.1): Research paper access
 - **[PyPDF](https://pypdf.readthedocs.io/)** (v6.4.2): PDF processing
 
@@ -496,15 +516,29 @@ embeddings:
     embedding_metadata_path: "files/embedding_metadata.json"
 
 agent:
-  llm_model: "gpt-4o"                # LLM for answer generation
+  llm_model: "gpt-4o"                # LLM for agents
   max_iterations: 5                  # Max agent iterations
+  report:
+    target_word_count: 2000
+    sections:
+      - "Executive Summary"
+      - "Background"
+      - "Key Findings"
+      - "Analysis"
+      - "Implications"
+      - "Open Questions"
+      - "References"
+  hitl:
+    enabled: true
   tools:
     rag:
       top_k: 5                       # Number of documents to retrieve
-    serpapi:
-      max_results: 3                 # Number of web results
+    web:
+      provider: "serper"             # serper | serpapi
+      max_results: 5                 # Number of web results
   output:
     responses_path: "files/agent_responses.json"
+    reports_path: "files/reports.json"
 ```
 
 ### Environment Variables
@@ -513,7 +547,8 @@ agent:
 |----------|----------|-------------|
 | `OPENAI_API_KEY` | Yes | OpenAI API key for embeddings and LLM |
 | `PINECONE_API_KEY` | Yes | Pinecone API key for vector database |
-| `SERPAPI_API_KEY` | Optional | SerpAPI key for web search (agent will skip web search if not provided) |
+| `SERPER_API_KEY` | Optional | Serper API key for web search |
+| `SERPAPI_API_KEY` | Optional | SerpAPI key for web search |
 | `LANGCHAIN_TRACING_V2` | Optional | Enable LangSmith tracing (true/false) |
 | `LANGCHAIN_API_KEY` | Optional | LangSmith API key for monitoring |
 | `LANGCHAIN_PROJECT` | Optional | LangSmith project name |

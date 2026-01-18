@@ -144,10 +144,10 @@ class TestAgentWorkflow:
     def test_agent_classification_and_rag(
         self, mock_pinecone, mock_embeddings, mock_llm, mock_env_vars, test_config
     ):
-        """Test agent query classification and RAG search flow."""
+        """Test multi-agent workflow end-to-end (mocked)."""
         from src.agent_graph import build_graph
         
-        # Mock LLM for classification
+        # Mock LLM for all agent steps
         mock_llm_instance = Mock()
         mock_response = Mock()
         mock_response.content = '{"tools": ["rag_search"]}'
@@ -175,9 +175,21 @@ class TestAgentWorkflow:
                 "messages": [],
                 "retrieved_docs": "",
                 "web_results": "",
-                "final_answer": "",
                 "tools_to_use": [],
-                "iteration": 0
+                "iteration": 0,
+                "research_notes": "",
+                "research_summary": "",
+                "sources": "",
+                "research_complete": False,
+                "approval_required": False,
+                "approved": True,
+                "awaiting_approval": False,
+                "draft_report": "",
+                "edited_report": "",
+                "fact_check_report": "",
+                "final_report": "",
+                "final_answer": "",
+                "stage": "initialized"
             }
             
             # This should not raise an exception
@@ -185,6 +197,7 @@ class TestAgentWorkflow:
             
             assert "tools_to_use" in result
             assert isinstance(result["tools_to_use"], list)
+            assert "final_report" in result
 
 
 class TestConfigurationHandling:

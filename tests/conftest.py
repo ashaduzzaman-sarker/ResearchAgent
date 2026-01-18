@@ -15,6 +15,7 @@ def mock_env_vars(monkeypatch):
     """Mock environment variables for testing."""
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("PINECONE_API_KEY", "test-pinecone-key")
+    monkeypatch.setenv("SERPER_API_KEY", "test-serper-key")
     monkeypatch.setenv("SERPAPI_API_KEY", "test-serpapi-key")
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
 
@@ -56,16 +57,25 @@ def test_config():
         "agent": {
             "llm_model": "gpt-4o-mini",
             "max_iterations": 5,
+            "report": {
+                "target_word_count": 800,
+                "sections": ["Summary", "Findings", "References"]
+            },
+            "hitl": {
+                "enabled": False
+            },
             "tools": {
                 "rag": {
                     "top_k": 3
                 },
-                "serpapi": {
+                "web": {
+                    "provider": "serper",
                     "max_results": 2
                 }
             },
             "output": {
-                "responses_path": "tests/data/agent_responses.json"
+                "responses_path": "tests/data/agent_responses.json",
+                "reports_path": "tests/data/reports.json"
             }
         }
     }

@@ -2,7 +2,7 @@
 data_extraction:
   arxiv:
     search_query: "cat:cs.AI"
-    max_results: 100
+    max_results: 10
   output:
     json_file_path: "files/arxiv_dataset.json"
     pdf_folder: "files/pdfs"
@@ -24,13 +24,27 @@ embeddings:
 agent:
   llm_model: "gpt-4o"
   max_iterations: 5
+  report:
+    target_word_count: 2000
+    sections:
+      - "Executive Summary"
+      - "Background"
+      - "Key Findings"
+      - "Analysis"
+      - "Implications"
+      - "Open Questions"
+      - "References"
+  hitl:
+    enabled: true
   tools:
     rag:
       top_k: 5
-    serpapi:
-      max_results: 3
+    web:
+      provider: "serper"  # serper | serpapi
+      max_results: 5
   output:
     responses_path: "files/agent_responses.json"
+    reports_path: "files/reports.json"
 streamlit:
   port: 8501
   title: "Research Agent Interface"
