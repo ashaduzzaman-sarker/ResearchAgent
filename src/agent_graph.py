@@ -74,6 +74,7 @@ class AgentState(TypedDict):
     approval_required: bool
     approved: bool
     awaiting_approval: bool
+    revision_request: str
     draft_report: str
     edited_report: str
     fact_check_report: str
@@ -169,7 +170,9 @@ Output sections:
 
 Be precise and avoid hallucinations. If evidence is insufficient, say so."""
 
+        revision_request = state.get("revision_request", "")
         user_prompt = f"""Topic: {query}
+    Revision requests from user (if any): {revision_request or "None"}
 
 Research Papers (RAG):
 {retrieved_docs if retrieved_docs else "No research papers retrieved"}
@@ -226,8 +229,8 @@ def writer_agent(state: AgentState) -> AgentState:
         sections = report_conf.get("sections", [])
 
         system_prompt = """You are an expert technical writer. Draft a deep-dive report based on the research notes.
-The report must be comprehensive, structured, and approximately the target length.
-Include clear headings and cite sources by title or URL in parentheses when relevant."""
+    The report must be comprehensive, structured, and approximately the target length.
+    Output must be valid Markdown with clear headings and citations (title or URL) in parentheses."""
 
         user_prompt = f"""Topic: {state['query']}
 Target length: {target_word_count} words
@@ -261,7 +264,7 @@ def editor_agent(state: AgentState) -> AgentState:
     try:
         config = load_config()
         system_prompt = """You are a senior editor. Improve clarity, structure, and flow.
-Preserve factual claims and citations. Return the full revised report."""
+    Preserve factual claims and citations. Return the full revised report in Markdown."""
 
         user_prompt = f"""Draft Report:
 {state.get('draft_report', '')}
@@ -328,7 +331,8 @@ def finalize_report(state: AgentState) -> AgentState:
     try:
         config = load_config()
         system_prompt = """You are the lead editor. Produce the final report.
-Incorporate fact-check notes and add caveats where needed. Keep citations."""
+    Incorporate fact-check notes and add caveats where needed. Keep citations.
+    Return the final report in Markdown."""
 
         user_prompt = f"""Edited Report:
 {state.get('edited_report', '')}
@@ -365,6 +369,8 @@ Fact-Check Notes:
 # ================================
 def route_from_start(state: AgentState) -> str:
     """Route to research or directly to writing when resuming after approval."""
+    if state.get("revision_request"):
+        return "research_agent"
     if state.get("approved") and state.get("research_complete"):
         return "writer_agent"
     return "research_agent"

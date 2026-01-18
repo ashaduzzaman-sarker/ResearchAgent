@@ -153,6 +153,8 @@ Research Agent is a multi-agent autonomous research team that combines **Retriev
    cp .env.example .env
    # Edit .env with your API keys
    ```
+  Required for web search:
+  - `SERPER_API_KEY` (recommended) or `SERPAPI_API_KEY`
 
 3. **Build and run with Docker Compose**
    ```bash

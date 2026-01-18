@@ -25,6 +25,8 @@ WORKDIR /app
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder
@@ -34,10 +36,11 @@ COPY --from=builder /root/.local /root/.local
 COPY src/ ./src/
 COPY streamlit_app.py .
 COPY config.yaml .
-COPY .env.example .env
+# Environment variables should be injected at runtime
 
 # Make sure scripts are in PATH
 ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
 
 # Create necessary directories
 RUN mkdir -p files/pdfs logs

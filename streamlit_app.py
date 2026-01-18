@@ -66,7 +66,7 @@ def initialize_graph():
         st.error("Failed to initialize agent graph.")
         raise
 
-def run_agent(query: str, graph, config: dict, resume_state: dict | None = None, approved: bool = False) -> dict:
+def run_agent(query: str, graph, config: dict, resume_state: dict | None = None, approved: bool = False, revision_request: str = "") -> dict:
     """Execute agent query and return structured response."""
     if not query or not isinstance(query, str) or not query.strip():
         logger.warning("Empty or invalid query submitted")
@@ -78,6 +78,8 @@ def run_agent(query: str, graph, config: dict, resume_state: dict | None = None,
             initial_state["approved"] = approved
             initial_state["awaiting_approval"] = False
             initial_state["stage"] = "approved"
+            if revision_request:
+                initial_state["revision_request"] = revision_request
         else:
             initial_state = {
                 "query": query,
@@ -93,6 +95,7 @@ def run_agent(query: str, graph, config: dict, resume_state: dict | None = None,
                 "approval_required": config.get("agent", {}).get("hitl", {}).get("enabled", True),
                 "approved": not config.get("agent", {}).get("hitl", {}).get("enabled", True),
                 "awaiting_approval": False,
+                "revision_request": "",
                 "draft_report": "",
                 "edited_report": "",
                 "fact_check_report": "",
@@ -307,13 +310,30 @@ def main():
         st.markdown("### 📚 Sources")
         st.text_area("Sources", response.get("state", {}).get("sources", ""), height=250)
 
+        change_notes = st.text_area("Request changes for the researcher (optional)")
+
         col_approve, col_reject = st.columns([1, 1])
         if col_approve.button("✅ Approve and Write Report", type="primary"):
             with st.spinner("✍️ Writing report..."):
                 resumed = run_agent(query, graph, config, resume_state=response.get("state", {}), approved=True)
                 st.session_state.last_response = resumed
                 st.rerun()
-        if col_reject.button("🛑 Reject and Stop"):
+        if col_reject.button("🔁 Request Changes"):
+            if not change_notes.strip():
+                st.error("Please enter change requests before resubmitting.")
+            else:
+                with st.spinner("🔎 Re-running research..."):
+                    resumed = run_agent(
+                        query,
+                        graph,
+                        config,
+                        resume_state=response.get("state", {}),
+                        approved=False,
+                        revision_request=change_notes.strip()
+                    )
+                    st.session_state.last_response = resumed
+                    st.rerun()
+        if st.button("🛑 Reject and Stop"):
             st.session_state.last_response = None
             st.info("Approval rejected. You can refine the query and retry.")
         return

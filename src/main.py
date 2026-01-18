@@ -240,6 +240,7 @@ def run_interactive_query():
                 "approval_required": config.get("agent", {}).get("hitl", {}).get("enabled", True),
                 "approved": not config.get("agent", {}).get("hitl", {}).get("enabled", True),
                 "awaiting_approval": False,
+                "revision_request": "",
                 "draft_report": "",
                 "edited_report": "",
                 "fact_check_report": "",
@@ -252,12 +253,21 @@ def run_interactive_query():
                 result = graph.invoke(initial_state)
 
                 if result.get("awaiting_approval"):
-                    approval = input("\n🛑 Research complete. Approve to proceed with writing? (y/n): ").strip().lower()
+                    approval = input("\n🛑 Research complete. Approve to proceed with writing? (y/n/change): ").strip().lower()
                     if approval in ["y", "yes"]:
                         result["approved"] = True
                         result["awaiting_approval"] = False
+                        result["revision_request"] = ""
                         result["stage"] = "approved"
                         result = graph.invoke(result)
+                    elif approval in ["change", "c", "changes"]:
+                        notes = input("Enter change requests for research: ").strip()
+                        result["approved"] = False
+                        result["awaiting_approval"] = False
+                        result["revision_request"] = notes
+                        result["stage"] = "revise_research"
+                        result = graph.invoke(result)
+                        continue
                     else:
                         print("\nReport generation cancelled by user.")
                         continue
